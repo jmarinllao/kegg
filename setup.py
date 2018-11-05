@@ -28,7 +28,7 @@ INSTALL_REQUIRES = [
     'click',
     'requests',
     'bio2bel>=0.1.0',
-    'compath_utils>=0.1.0',
+    'compath_utils>=0.2.0',
     'bio2bel_hgnc>=0.1.0',
     'pybel>=0.12.1',
     'sqlalchemy',

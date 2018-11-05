@@ -33,7 +33,7 @@ log = logging.getLogger(__name__)
 logging.getLogger("urllib3").setLevel(logging.WARNING)
 
 
-class Manager(CompathManager, BELNamespaceManagerMixin, BELManagerMixin, FlaskMixin):
+class Manager(CompathManager):
     """Manage the Bio2BEL KEGG database."""
 
     module_name = MODULE_NAME
