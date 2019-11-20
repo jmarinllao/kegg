@@ -19,6 +19,7 @@ from compath_utils import CompathManager
 from pybel.constants import BIOPROCESS, PROTEIN
 from pybel.manager.models import Namespace, NamespaceEntry
 from pybel.struct.graph import BELGraph
+
 from .constants import API_KEGG_GET, KEGG, METADATA_FILE_PATH, MODULE_NAME, PROTEIN_ENTRY_DIR
 from .models import Base, Pathway, Protein, protein_pathway
 from .parsers import (
