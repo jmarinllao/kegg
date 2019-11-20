@@ -7,11 +7,12 @@ import os
 
 import bio2bel_hgnc
 from bio2bel.testing import TemporaryConnectionMixin
-from bio2bel_kegg.constants import HGNC, KEGG
-from bio2bel_kegg.manager import Manager
 from pybel.constants import DECREASES, INCREASES, PART_OF, RELATION
 from pybel.dsl import bioprocess, gene, protein
 from pybel.struct.graph import BELGraph
+
+from bio2bel_kegg.constants import HGNC, KEGG
+from bio2bel_kegg.manager import Manager
 
 log = logging.getLogger(__name__)
 
@@ -75,20 +76,15 @@ def enrichment_graph():
         version='0.0.1'
     )
 
-    protein_a_tuple = graph.add_node_from_data(protein_a)
-    protein_b_tuple = graph.add_node_from_data(protein_b)
-    gene_c_tuple = graph.add_node_from_data(gene_c)
-    pathway_a_tuple = graph.add_node_from_data(pathway_a)
-
-    graph.add_edge(protein_a_tuple, protein_b_tuple, attr_dict={
+    graph.add_edge(protein_a, protein_b, attr_dict={
         RELATION: INCREASES,
     })
 
-    graph.add_edge(protein_b_tuple, gene_c_tuple, attr_dict={
+    graph.add_edge(protein_b, gene_c, attr_dict={
         RELATION: DECREASES,
     })
 
-    graph.add_edge(gene_c_tuple, pathway_a_tuple, attr_dict={
+    graph.add_edge(gene_c, pathway_a, attr_dict={
         RELATION: PART_OF,
     })
 
