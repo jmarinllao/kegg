@@ -29,9 +29,11 @@ class TestDescriptionParse(unittest.TestCase):
                 ('hsa01200', 'Carbon metabolism'),
                 ('hsa01230', 'Biosynthesis of amino acids'),
                 ('hsa03018', 'RNA degradation'),
+                ('hsa04066', 'HIF-1 signaling pathway'),
                 ('hsa04152', 'AMPK signaling pathway'),
                 ('hsa04919', 'Thyroid hormone signaling pathway'),
-                ('hsa05230', 'Central carbon metabolism in cancer')
+                ('hsa04922', 'Glucagon signaling pathway'),
+                ('hsa05230', 'Central carbon metabolism in cancer'),
             ],
             pfkp_protein['PATHWAY']
         )
