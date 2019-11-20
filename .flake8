@@ -3,6 +3,7 @@ ignore =
 	C901 # too complex methods
 	I100 # imports
 	I201 # imports
+	I202 # imports
 max-line-length = 120
 exclude =
     .tox,
