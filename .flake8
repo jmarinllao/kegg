@@ -1,6 +1,8 @@
 [flake8]
 ignore =
 	C901 # too complex methods
+	I100 # imports
+	I201 # imports
 max-line-length = 120
 exclude =
     .tox,

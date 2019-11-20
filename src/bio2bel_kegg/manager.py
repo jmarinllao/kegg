@@ -10,6 +10,8 @@ from typing import List, Mapping, Optional
 
 import bio2bel_hgnc
 import requests
+from tqdm import tqdm
+
 from bio2bel.manager.bel_manager import BELManagerMixin
 from bio2bel.manager.flask_manager import FlaskMixin
 from bio2bel.manager.namespace_manager import BELNamespaceManagerMixin
@@ -17,8 +19,6 @@ from compath_utils import CompathManager
 from pybel.constants import BIOPROCESS, PROTEIN
 from pybel.manager.models import Namespace, NamespaceEntry
 from pybel.struct.graph import BELGraph
-from tqdm import tqdm
-
 from .constants import API_KEGG_GET, KEGG, METADATA_FILE_PATH, MODULE_NAME, PROTEIN_ENTRY_DIR
 from .models import Base, Pathway, Protein, protein_pathway
 from .parsers import (
@@ -266,7 +266,8 @@ class Manager(CompathManager, BELNamespaceManagerMixin, BELManagerMixin, FlaskMi
     def enrich_kegg_pathway(self, graph: BELGraph) -> None:
         """Enrich all proteins belonging to KEGG pathway nodes in the graph."""
         for node in list(graph):
-            if node.function and node.function == BIOPROCESS and node.namespace and node.namespace == KEGG and node.name:
+            if node.function and node.function == BIOPROCESS \
+                    and node.namespace and node.namespace == KEGG and node.name:
                 pathway = self.get_pathway_by_name(node.name)
                 for protein in pathway.proteins:
                     graph.add_part_of(protein.to_pybel(), node)
