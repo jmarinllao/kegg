@@ -3,16 +3,17 @@
 """Manager for Bio2BEL KEGG."""
 
 import logging
-from typing import List, Mapping, Optional
+from typing import List, Mapping, Optional, Union, Set, Tuple
+from urllib.parse import urljoin
 
+from bio2bel.compath import CompathManager, CompathPathwayMixin
 from tqdm import tqdm
 
-from bio2bel.compath import CompathManager
 from .client import (
     ENTREZ_ID_TO_HGNC_ID, HGNC_ID_TO_SYMBOL, get_entities_lines, parse_pathway_lines,
     parse_protein_lines,
 )
-from .constants import MODULE_NAME
+from .constants import MODULE_NAME, KEGG_PATHWAYS_URL, PROTEIN_PATHWAY_URL
 from .models import Base, Pathway, Protein, Species, protein_pathway
 from .parsers import get_entity_pathway_df, get_organisms_df, get_pathway_df
 
@@ -35,11 +36,11 @@ class Manager(CompathManager):
     protein_model = Protein
 
     def get_or_create_pathway(
-        self,
-        kegg_pathway_id: str,
-        species: Species,
-        name: Optional[str] = None,
-        definition: Optional[str] = None,
+            self,
+            kegg_pathway_id: str,
+            species: Species,
+            name: Optional[str] = None,
+            definition: Optional[str] = None,
     ) -> Pathway:
         """Get an pathway from the database or creates it.
 
@@ -78,17 +79,15 @@ class Manager(CompathManager):
 
     """Methods to populate the DB"""
 
-    def _populate_organisms(self, url: Optional[str] = None):
-        organisms_df = get_organisms_df(url=url)
-        logger.debug('got %d organisms', len(organisms_df.index))
-        # TODO implement
-
-    def _populate_pathways(self, url: Optional[str] = None):
+    def _populate_pathways(self,
+                           url: Optional[str] = None,
+                           specie_id: Optional[str] = 'Homo sapiens',
+                           taxonomy_id: Optional[str] = '9606'):
         """Populate pathways.
 
         :param url: url from pathway table file
         """
-        species = Species(name='Homo sapiens', taxonomy_id='9606')
+        species = Species(name=specie_id, taxonomy_id=taxonomy_id)
         self.session.add(species)
 
         pathways_df = get_pathway_df(url=url)
@@ -104,10 +103,85 @@ class Manager(CompathManager):
 
         self.session.commit()
 
+    def _populate_pathways_specie(self, specie_id: Optional[str] = None, metadata_existing=None):
+        """Populate pathways for A SINGLE specie.
+
+        :param specie_id: name or id of the specie to populate
+        :param metadata_existing: metadata exists already
+        """
+        df_pathway_species = get_organisms_df()
+
+        if specie_id in list(df_pathway_species['kegg_code']):
+            kegg_id = specie_id
+            organism_name = df_pathway_species.loc[df_pathway_species['kegg_code'] == specie_id]['name'].values[0]
+
+        elif specie_id in list(df_pathway_species['name']):
+            kegg_id = df_pathway_species.loc[df_pathway_species['name'] == specie_id]['kegg_code'].values[0]
+            organism_name = specie_id
+
+        elif specie_id in list(df_pathway_species['common_name']):
+            kegg_id = df_pathway_species.loc[df_pathway_species['common_name'] == specie_id]['kegg_code'].values[0]
+            organism_name = df_pathway_species.loc[df_pathway_species['common_name'] == specie_id]['name'].values[0]
+
+        else:
+            raise Warning(f'Organism id {specie_id} not found in KEGG.')
+
+        self._populate_pathways(urljoin(KEGG_PATHWAYS_URL, kegg_id), organism_name, None)
+        self._populate_pathway_protein(url=urljoin(PROTEIN_PATHWAY_URL, kegg_id))
+
+    def _populate_pathways_species(self, species_id: Optional[Union[str, List]] = None, metadata_existing=None):
+        """Populate pathways for A OR MANY species.
+
+        :param species_id: name or id of the specie or species (if list) to populate
+        :param metadata_existing: metadata exists already
+        """
+        if isinstance(species_id, str):
+            self._populate_pathways_specie(species_id, metadata_existing)
+
+        elif isinstance(species_id, list):
+            for specie_id in species_id:
+                self._populate_pathways_specie(specie_id, metadata_existing)
+        else:
+            # If none specified, populate ALL species in KEGG
+            df_pathway_species = get_organisms_df()
+
+            for specie_id in df_pathway_species['kegg_code']:
+                self._populate_pathways(urljoin(KEGG_PATHWAYS_URL, specie_id))
+
+    def get_all_pathways(self) -> List[CompathPathwayMixin]:
+        """Get all pathways stored in the database."""
+        return self._query_pathway().all()
+
+    def get_all_pathway_names(self) -> List[str]:
+        """Get all pathway names stored in the database."""
+        return [
+            pathway.name
+            for pathway in self._query_pathway().all()
+        ]
+
+    def get_all_hgnc_symbols(self) -> Set[str]:
+        """Return the set of genes present in all Pathways."""
+        return {
+            gene.hgnc_symbol
+            for pathway in self.get_all_pathways()
+            for gene in pathway.proteins
+            if pathway.proteins
+        }
+
+    def get_pathway_size_distribution(self) -> Mapping[str, Tuple[str, int]]:
+        """Return pathway sizes."""
+        pathways = self.get_all_pathways()
+
+        return {
+            pathway.identifier: (pathway.name, len(pathway.proteins))
+            for pathway in pathways
+            if pathway.proteins
+        }
+
     def _populate_pathway_protein(
-        self,
-        url: Optional[str] = None,
-        thread_pool_size: Optional[int] = None,
+            self,
+            url: Optional[str] = None,
+            thread_pool_size: Optional[int] = None,
     ) -> None:
         """Populate proteins.
 
@@ -162,15 +236,17 @@ class Manager(CompathManager):
         self.session.commit()
 
     def populate(
-        self,
-        organism_url: Optional[str] = None,
-        pathways_url: Optional[str] = None,
-        protein_pathway_url: Optional[str] = None,
+            self,
+            organisms: Optional[Union[str, List[str]]] = None,
+            pathways_url: Optional[str] = None,
+            protein_pathway_url: Optional[str] = None,
     ):
         """Populate all tables."""
-        self._populate_organisms(url=organism_url)
-        self._populate_pathways(url=pathways_url)
-        self._populate_pathway_protein(url=protein_pathway_url)
+        if organisms:
+            self._populate_pathways_species(organisms)
+        else:
+            self._populate_pathways(url=pathways_url)
+            self._populate_pathway_protein(url=protein_pathway_url)
 
     def count_pathways(self) -> int:
         """Count the pathways in the database."""

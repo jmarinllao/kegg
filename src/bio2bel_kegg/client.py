@@ -137,7 +137,7 @@ def parse_pathway_lines(lines: Iterable[str]) -> Mapping[str, Any]:
         group_lines = (line for _, line in group_lines)
         if group == 'ENTRY':
             line = get_line(group_lines)
-            kegg_id, _ = line.split()
+            kegg_id = line.split()[0]
             rv['identifier'] = kegg_id
         elif group == 'NAME':
             rv['name'] = get_line(group_lines)

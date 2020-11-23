@@ -29,6 +29,9 @@ KEGG_STATISTICS_URL = 'http://rest.kegg.jp/info/kegg'
 # returns the list of organism pathways
 KEGG_ORGANISM_URL = 'http://rest.kegg.jp/list/organism'
 
+# Description KEGG endpoint
+API_KEGG_GET = 'http://rest.kegg.jp/get/{}'
+
 # Description properties
 DBLINKS = 'DBLINKS'
 PATHWAYS = 'PATHWAYS'

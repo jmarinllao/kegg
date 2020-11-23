@@ -17,3 +17,4 @@ Citation
 """
 
 from .manager import Manager  # noqa: F401
+from .parsers import get_organisms_df
